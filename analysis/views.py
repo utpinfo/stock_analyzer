@@ -1,3 +1,4 @@
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.shortcuts import render
 from django.utils.html import format_html
 
@@ -5,6 +6,7 @@ from analysis import MySQL
 from analysis.analysis_core import main
 import json
 import django_tables2 as tables
+
 
 class StockTable(tables.Table):
     stock_id = tables.Column(verbose_name="ID", visible=False)
@@ -26,18 +28,33 @@ class StockTable(tables.Table):
     class Meta:
         attrs = {"class": "table table-striped table-hover"}
 
+
 def home(request):
     return stocks(request)
+
+
 def stocks(request):
     stock_code = request.GET.get('stockCode')
     stock_code = [str(stock_code)] if stock_code else None
     stock_status = request.GET.get('stockStatus')
-    stock_status = str(stock_status) if stock_status else 90
+    stock_status = str(stock_status) if stock_status else '90'
 
-    data = MySQL.get_stock(stock_status=stock_status, stock_code=stock_code)  # 股票列表
-    # data = json.dumps(data, ensure_ascii=False, default=str)
+    data = MySQL.get_stock(stock_status=stock_status, stock_code=stock_code)
+    # data = data[:3000]  # 限制最大筆數
+    page_size = 30
     table = StockTable(data)
-    return render(request, 'analysis/stocks.html', {'table': table})
+    paginator = Paginator(data, page_size)
+
+    page_number = request.GET.get("page", "1")
+
+    page_obj = paginator.get_page(page_number)
+
+    table.paginate(page=page_obj.number, per_page=page_size)
+
+    return render(request, 'analysis/stocks.html', {
+        'table': table,
+        'page_obj': page_obj,
+    })
 
 
 def stock_detail(request, id):
