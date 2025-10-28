@@ -6,15 +6,12 @@ from analysis.analysis_core import main
 import json
 import django_tables2 as tables
 
-
 class StockTable(tables.Table):
-    stock_id = tables.Column(verbose_name="ID")
+    stock_id = tables.Column(verbose_name="ID", visible=False)
     stock_code = tables.Column(verbose_name="股票代號")
     stock_name = tables.Column(verbose_name="股票名稱")
     stock_kind = tables.Column(verbose_name="市場別")
     stock_status = tables.Column(verbose_name="狀態")
-    entry_date = tables.Column(verbose_name="建立時間")
-    tr_date = tables.Column(verbose_name="交易時間")
 
     # 導航按鈕
     action = tables.Column(verbose_name="操作", empty_values=(), orderable=False)
