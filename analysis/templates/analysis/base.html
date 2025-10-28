@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {% load static %}
+    <title>{% block title %}Stock Analyzer{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'analysis/css/style.css' %}">
+</head>
+<body>
+    <nav>
+        <a href="{% url 'home' %}">首頁</a> |
+        <a href="{% url 'stock_list' %}">股票列表</a>
+    </nav>
+    <hr>
+    {% block content %}{% endblock %}
+</body>
+</html>

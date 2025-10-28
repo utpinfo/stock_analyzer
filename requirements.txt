@@ -1,0 +1,11 @@
+yfinance
+lxml
+bs4
+requests
+pandas
+pymysql
+seaborn
+matplotlib
+pandas_ta
+tabulate
+pyhumps
