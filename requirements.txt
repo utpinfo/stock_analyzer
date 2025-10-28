@@ -9,3 +9,5 @@ matplotlib
 pandas_ta
 tabulate
 pyhumps
+django
+django-tables2

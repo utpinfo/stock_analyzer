@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'analysis',  # <- 一定要有這一行
+    'django_tables2'
 ]
 
 MIDDLEWARE = [
