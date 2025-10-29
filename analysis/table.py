@@ -4,7 +4,7 @@ from django.utils.html import format_html
 
 
 class StockTable(tables.Table):
-    stock_id = tables.Column(verbose_name="ID", visible=True)
+    stock_id = tables.Column(verbose_name="ID", visible=False)
     stock_code = tables.Column(verbose_name="股票代號")
     stock_name = tables.Column(verbose_name="股票名稱")
     stock_kind = tables.Column(verbose_name="市場別")
