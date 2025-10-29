@@ -954,9 +954,9 @@ def main(stockCode: str, analyse_days: int = 90):
         calc_vpmo(df)
         # 計算KDJ
         kd = ta.stoch(high=df['high'], low=df['low'], close=df['close'], k=9, d=3, smooth_k=3)
-        K = kd['STOCHk_9_3_3'].round(decimal_place)
-        D = kd['STOCHd_9_3_3'].round(decimal_place)
-        J = (kd['STOCHk_9_3_3'] - 2 * kd['STOCHd_9_3_3']).round(decimal_place)
+        K = kd.iloc[:, 0].round(decimal_place)
+        D = kd.iloc[:, 1].round(decimal_place)
+        J = (3 * K - 2 * D).round(decimal_place)
         df['KDJ'] = list(zip(K, D, J))
         df['J'] = J
         df['prevKDJ'] = df['KDJ'].shift(1)
