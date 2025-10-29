@@ -72,6 +72,43 @@
 
     const reasons = df.map(r => r.reason || ''); // 空值用空字串
     const revenues = df.map(r => r.revenue || ''); // 空值用空字串
+    const revenueMarks = [];
+    let lastValidRevenueIndex = null;
+
+    // 找前一筆有效 revenue
+    for (let i = 0; i < revenues.length; i++) {
+        const currRevenue = revenues[i];
+        if (!currRevenue || currRevenue <= 0) continue; // 當前無效就跳過
+
+        if (lastValidRevenueIndex !== null) {
+            const prevRevenue = revenues[lastValidRevenueIndex];
+
+            if (currRevenue > prevRevenue) {
+                revenueMarks.push({
+                    xAxis: dates[i],
+                    yAxis: 0,
+                    itemStyle: {color: '#FF0000'}, // 上升紅
+                    symbol: 'triangle',
+                    symbolRotate: 0,
+                    symbolSize: 12,
+                    label: {show: false}
+                });
+            } else if (currRevenue < prevRevenue) {
+                revenueMarks.push({
+                    xAxis: dates[i],
+                    yAxis: 0,
+                    itemStyle: {color: '#00FF00'}, // 下降綠
+                    symbol: 'triangle',
+                    symbolRotate: 180,
+                    symbolSize: 12,
+                    label: {show: false}
+                });
+            }
+        }
+
+        lastValidRevenueIndex = i; // 更新為有效 revenue 的索引
+    }
+    console.log(revenueMarks);
 
     function createChart(id, option) {
         const chart = echarts.init(document.getElementById(id));
@@ -287,11 +324,23 @@
     });
 
     createChart('revenueChart', {
-        title: {text: '營收'}, tooltip: {trigger: 'axis'},
-        xAxis: {type: 'category', data: dates}, yAxis: {type: 'value', name: '營收金額'},
-        series: [{type: 'bar', data: revenues}]
+        title: {text: '營收'},
+        tooltip: {trigger: 'axis'},
+        xAxis: {type: 'category', data: dates},
+        yAxis: {type: 'value', name: '營收金額'},
+        series: [
+            {
+                type: 'bar',
+                data: revenues,
+                itemStyle: {color: '#87CEFA'},
+                markPoint: {
+                    symbol: 'triangle',
+                    symbolSize: 12,
+                    data: revenueMarks
+                }
+            }
+        ]
     });
-
 
     const form = document.getElementById('stockForm');
     form.addEventListener('submit', function (e) {
