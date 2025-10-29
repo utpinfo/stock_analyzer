@@ -41,6 +41,7 @@
     <div id="rsiChart" class="chart" style="height:250px"></div>
     <div id="macdChart" class="chart" style="height:250px"></div>
     <div id="kdjChart" class="chart" style="height:250px"></div>
+    <div id="revenueChart" class="chart" style="height:250px"></div>
 </div>
 
 <script>
@@ -52,6 +53,7 @@
     const volume = df.map(r => r.volume), rsi = df.map(r => r.RSI), pvr = df.map(r => r.ampPvr), macd = df.map(r => r.MACD || 0);
     const kdj = df.map(r => r.KDJ || [null, null, null]);
     const reasons = df.map(r => r.reason || ''); // 空值用空字串
+    const revenues = df.map(r => r.revenue || ''); // 空值用空字串
     function createChart(id, option) {
         const chart = echarts.init(document.getElementById(id));
         chart.setOption(option);
@@ -199,6 +201,13 @@
         ],
         markLine: {data: [{yAxis: 80}, {yAxis: 20}]}
     });
+
+    createChart('revenueChart', {
+        title: {text: '營收'}, tooltip: {trigger: 'axis'},
+        xAxis: {type: 'category', data: dates}, yAxis: {type: 'value', name: '營收金額'},
+        series: [{type: 'bar', data: revenues}]
+    });
+
 
 
     const form = document.getElementById('stockForm');

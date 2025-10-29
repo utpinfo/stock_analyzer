@@ -445,6 +445,7 @@ def add_revenue(df, stock_code):
         return df
 
     revenues = humps.camelize(revenues)
+
     dfr = pd.DataFrame(revenues)
     dfr['diffRevenue'] = dfr['revenue'] / dfr['revenue'].ffill().shift(1)
     df = pd.merge(
@@ -456,6 +457,7 @@ def add_revenue(df, stock_code):
     )
     df.drop(columns=['revenueDate'], inplace=True)
     df = df.sort_values('priceDate').reset_index(drop=True)
+
     return df
 
 
