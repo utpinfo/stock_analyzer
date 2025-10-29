@@ -16,8 +16,12 @@
                value="{{ request.GET.stockCode }}">
     </div>
     <div class="col-auto">
+        <input type="text" class="form-control" name="stockName" placeholder="輸入股票名稱"
+               value="{{ request.GET.stockName }}">
+    </div>
+    <div class="col-auto">
         <input type="text" class="form-control" name="stockStatus" placeholder="輸入股票狀態"
-               value="{{ request.GET.stockStatus }}">
+               value="{{ request.GET.stockStatus | default:'90' }}">
     </div>
     <div class="col-auto">
         <button type="submit" class="btn btn-primary">查詢</button>
@@ -36,7 +40,8 @@
                 <li class="page-item">
                     <a class="page-link" href="?page=
 
-                            {{ page_obj.previous_page_number }}{% if request.GET.stockCode %}&stockCode={{ request.GET.stockCode }}{% endif %}{% if request.GET.stockStatus %}&stockStatus={{ request.GET.stockStatus }}{% endif %}">上一頁</a>
+                            {{ page_obj.previous_page_number }}{% if request.GET.stockCode %}&stockCode=
+                        {{ request.GET.stockCode }}{% if request.GET.stockName %}&stockName={{ request.GET.stockName }}{% endif %}{% endif %}{% if request.GET.stockStatus %}&stockStatus={{ request.GET.stockStatus }}{% endif %}">上一頁</a>
                 </li>
             {% else %}
                 <li class="page-item disabled"><span class="page-link">上一頁</span></li>
@@ -50,14 +55,15 @@
                     <li class="page-item">
                         <a class="page-link" href="?page=
 
-                                {{ num }}{% if request.GET.stockCode %}&stockCode={{ request.GET.stockCode }}{% endif %}{% if request.GET.stockStatus %}&stockStatus={{ request.GET.stockStatus }}{% endif %}">
+
+                                {{ num }}{% if request.GET.stockCode %}&stockCode={{ request.GET.stockCode }}{% endif %}{% if request.GET.stockName %}&stockName={{ request.GET.stockName }}{% endif %}{% if request.GET.stockStatus %}&stockStatus={{ request.GET.stockStatus }}{% endif %}">
                             {{ num }}
                         </a>
                     </li>
                 {% elif num == 1 %}
                     <li class="page-item">
                         <a class="page-link"
-                           href="?page=1{% if request.GET.stockCode %}&stockCode={{ request.GET.stockCode }}{% endif %}{% if request.GET.stockStatus %}&stockStatus={{ request.GET.stockStatus }}{% endif %}">1</a>
+                           href="?page=1{% if request.GET.stockCode %}&stockCode={{ request.GET.stockCode }}{% endif %}{% if request.GET.stockName %}&stockName={{ request.GET.stockName }}{% endif %}{% if request.GET.stockStatus %}&stockStatus={{ request.GET.stockStatus }}{% endif %}">1</a>
                     </li>
                     {% if page_obj.number > 4 %}
                         <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -69,7 +75,8 @@
                     <li class="page-item">
                         <a class="page-link" href="?page=
 
-                                {{ num }}{% if request.GET.stockCode %}&stockCode={{ request.GET.stockCode }}{% endif %}{% if request.GET.stockStatus %}&stockStatus={{ request.GET.stockStatus }}{% endif %}">
+
+                                {{ num }}{% if request.GET.stockCode %}&stockCode={{ request.GET.stockCode }}{% endif %}{% if request.GET.stockName %}&stockName={{ request.GET.stockName }}{% endif %}{% if request.GET.stockStatus %}&stockStatus={{ request.GET.stockStatus }}{% endif %}">
                             {{ num }}
                         </a>
                     </li>
@@ -81,7 +88,8 @@
                 <li class="page-item">
                     <a class="page-link" href="?page=
 
-                            {{ page_obj.next_page_number }}{% if request.GET.stockCode %}&stockCode={{ request.GET.stockCode }}{% endif %}{% if request.GET.stockStatus %}&stockStatus={{ request.GET.stockStatus }}{% endif %}">下一頁</a>
+
+                            {{ page_obj.next_page_number }}{% if request.GET.stockCode %}&stockCode={{ request.GET.stockCode }}{% endif %}{% if request.GET.stockName %}&stockName={{ request.GET.stockName }}{% endif %}{% if request.GET.stockStatus %}&stockStatus={{ request.GET.stockStatus }}{% endif %}">下一頁</a>
                 </li>
             {% else %}
                 <li class="page-item disabled"><span class="page-link">下一頁</span></li>

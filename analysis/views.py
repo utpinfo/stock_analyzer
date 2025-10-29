@@ -17,9 +17,9 @@ def stocks(request):
     stock_code = request.GET.get('stockCode')
     stock_code = [str(stock_code)] if stock_code else None
     stock_status = request.GET.get('stockStatus')
-    stock_status = str(stock_status) if stock_status else '90'
+    stock_name = request.GET.get('stockName')
 
-    data = MySQL.get_stock(stock_status=stock_status, stock_code=stock_code)
+    data = MySQL.get_stock(stock_status=stock_status, stock_code=stock_code, stock_name=stock_name)
     # data = data[:3000]  # 限制最大筆數
     page_size = 30
     table = StockTable(data)

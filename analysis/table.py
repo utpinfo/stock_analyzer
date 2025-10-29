@@ -37,5 +37,13 @@ class StockTable(tables.Table):
             record["stock_kind"]
         )
 
+    def render_stock_status(self, record):
+        url = reverse("edit_stock", args=[record["stock_id"]])
+        return format_html(
+            '<span hx-get="{}?fields=stock_status" hx-trigger="click" hx-target="this" hx-swap="outerHTML" style="cursor:pointer;">{}</span>',
+            url,
+            record["stock_status"]
+        )
+
     class Meta:
         attrs = {"class": "table table-striped table-hover"}

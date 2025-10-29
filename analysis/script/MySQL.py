@@ -1,23 +1,27 @@
 from analysis.script.MySQLHelper import MySQLHelper
 
 
-def get_last_trade_date(stock_code, year, month):
-    helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
-    helper.connect()
-    sql = "select max(price_date) price_date from price where stock_code=%s and year(price_date) = %s and month(price_date) = %s"
-    params = (stock_code, year, month)
-    data = helper.execute_query(sql, params)
-    helper.close()
-    return data
+# ✅ 通用 context manager，確保自動關閉連線
+class DB:
+    def __enter__(self):
+        self.helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
+        self.helper.connect()
+        return self.helper
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.helper.close()
 
 
-def get_stock(stock_status='10', stock_code=None, stock_id=None):
-    helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
-    helper.connect()
+# === 共用查詢工具 ===
+def _build_conditions(conditions):
+    """將條件 list 轉為 SQL WHERE 字串"""
+    return " WHERE " + " AND ".join(conditions) if conditions else ""
 
+
+# === 股票資訊 ===
+def get_stock(stock_status=None, stock_code=None, stock_id=None, stock_name=None):
     sql = "SELECT * FROM stock"
-    params = []
-    conditions = []
+    params, conditions = [], []
 
     if stock_id:
         conditions.append("stock_id = %s")
@@ -36,168 +40,149 @@ def get_stock(stock_status='10', stock_code=None, stock_id=None):
         conditions.append("stock_status = %s")
         params.append(stock_status)
 
-    # 如果有任何條件，就加上 WHERE
-    if conditions:
-        sql += " WHERE " + " AND ".join(conditions)
-    data = helper.execute_query(sql, tuple(params))
-    helper.close()
-    return data
+    if stock_name:
+        names = stock_name if isinstance(stock_name, (list, tuple)) else [stock_name]
+        sub_conditions = []
+        for name in names:
+            sub_conditions.append("stock_name LIKE %s")
+            params.append(f"%{name}%")
+        conditions.append("(" + " OR ".join(sub_conditions) + ")")
+
+    sql += _build_conditions(conditions)
+    with DB() as db:
+        return db.execute_query(sql, tuple(params))
 
 
 def add_stock(stock_code, stock_name, stock_kind, isin_code):
-    helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
-    helper.connect()
     sql = """
-        insert into stock
-            (stock_code, stock_name, stock_kind, isin_code, stock_status)
-        values (%s, %s, %s, %s, '10')
-            on duplicate key update stock_name = values(stock_name), stock_kind = values(stock_kind), isin_code = values(isin_code), stock_status = values(stock_status)
-        """
-    params = (stock_code, stock_name, stock_kind, isin_code)
-    helper.execute_insert_update(sql, params)
-    helper.close()
+          INSERT INTO stock (stock_code, stock_name, stock_kind, isin_code, stock_status)
+          VALUES (%s, %s, %s, %s, '10') ON DUPLICATE KEY
+          UPDATE
+              stock_name =
+          VALUES (stock_name), stock_kind =
+          VALUES (stock_kind), isin_code =
+          VALUES (isin_code), stock_status =
+          VALUES (stock_status) \
+          """
+    with DB() as db:
+        db.execute_insert_update(sql, (stock_code, stock_name, stock_kind, isin_code))
+
 
 def update_stock(stock_id, **kwargs):
-    """
-    更新 stock 表的多個欄位。
-    :param stock_id: 必須提供，指定要更新的股票
-    :param kwargs: 欲更新的欄位，例如 stock_name="新名稱", stock_status="10"
-    """
-    if not stock_id:
-        raise ValueError("stock_id 必須提供")
-
     allowed_fields = {"stock_name", "stock_code", "stock_kind", "isin_code", "stock_status", "entry_id", "tr_id"}
     fields_to_update = {k: v for k, v in kwargs.items() if k in allowed_fields}
 
+    if not stock_id:
+        raise ValueError("stock_id 必須提供")
     if not fields_to_update:
         raise ValueError("沒有可更新的欄位")
 
-    helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
-    helper.connect()
-
-    # 拼接 SQL
-    set_clause = ", ".join([f"{k} = %s" for k in fields_to_update.keys()])
+    set_clause = ", ".join(f"{k} = %s" for k in fields_to_update)
     sql = f"UPDATE stock SET {set_clause} WHERE stock_id = %s"
     params = list(fields_to_update.values()) + [stock_id]
-    success = helper.execute_insert_update(sql, tuple(params))
-    helper.close()
 
-    if not success:
-        raise RuntimeError("更新股票資料失敗")
+    with DB() as db:
+        if not db.execute_insert_update(sql, tuple(params)):
+            raise RuntimeError("更新股票資料失敗")
 
-def get_price(stock_code, limit, sort='asc', b_price_date=None, e_price_date=None):
-    helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
-    helper.connect()
+
+# === 價格相關 ===
+def get_price(stock_code, limit=None, sort='asc', b_price_date=None, e_price_date=None):
     sql = """
-        SELECT stock_code, price_date, open, close, high, low, volume
-        FROM (
-            SELECT *
-            FROM price
-            WHERE stock_code = %s
-    """
+          SELECT stock_code, price_date, open, close, high, low, volume
+          FROM (
+              SELECT *
+              FROM price
+              WHERE stock_code = %s \
+          """
     params = [stock_code]
-    # 如果提供 price_date，加入過濾
+
     if b_price_date:
         sql += " AND price_date >= %s"
         params.append(b_price_date)
-
     if e_price_date:
         sql += " AND price_date <= %s"
         params.append(e_price_date)
-    # 內層排序與限制筆數
-    if limit:
-        sql += " ORDER BY price_date DESC LIMIT %s"
-        params.append(limit)
-    else:
-        sql += " ORDER BY price_date DESC"
 
-    # 外層排序
+    sql += " ORDER BY price_date DESC"
+    if limit:
+        sql += " LIMIT %s"
+        params.append(limit)
     sql += ") AS t ORDER BY t.price_date " + sort
 
-    data = helper.execute_query(sql, tuple(params))
-    helper.close()
-    return data
+    with DB() as db:
+        return db.execute_query(sql, tuple(params))
 
 
 def add_price(stock_code, price_date, open, close, high, low, volume=None):
-    helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
-    helper.connect()
     sql = """
-    insert into price
-        (stock_code, price_date, open, close, high, low, volume)
-    values (%s, %s, %s, %s, %s, %s, %s)
-        on duplicate key update close = values (close), volume = values(volume)
-    """
-    params = (stock_code, price_date, open, close, high, low, volume)
-    helper.execute_insert_update(sql, params)
-    # if helper.execute_insert_update(sql, params):
-    #    print("Data inserted successfully")
-    helper.close()
+          INSERT INTO price (stock_code, price_date, open, close, high, low, volume)
+          VALUES (%s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY
+          UPDATE
+              close =
+          VALUES (close), volume =
+          VALUES (volume) \
+          """
+    with DB() as db:
+        db.execute_insert_update(sql, (stock_code, price_date, open, close, high, low, volume))
 
 
-def get_revenue(stock_code, limit, sort='asc'):
-    helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
-    helper.connect()
+# === 營收相關 ===
+def get_revenue(stock_code, limit=None, sort='asc'):
     sql = """
-        SELECT stock_code, revenue_date, revenue
-        FROM (
-            SELECT *
-            FROM revenue
-            WHERE stock_code = %s
-    """
+          SELECT stock_code, revenue_date, revenue
+          FROM (SELECT *
+                FROM revenue
+                WHERE stock_code = %s
+                ORDER BY revenue_date DESC \
+          """
     params = [stock_code]
-    # 內層排序與限制筆數
     if limit:
-        sql += " ORDER BY revenue_date DESC LIMIT %s"
+        sql += " LIMIT %s"
         params.append(limit)
-    else:
-        sql += " ORDER BY revenue_date DESC"
-
-    # 外層排序
     sql += ") AS t ORDER BY t.revenue_date " + sort
 
-    data = helper.execute_query(sql, tuple(params))
-    helper.close()
-    return data
-
+    with DB() as db:
+        return db.execute_query(sql, tuple(params))
 
 
 def add_revenue(stock_code, revenue_date, revenue):
-    helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
-    helper.connect()
     sql = """
-    insert into revenue
-        (stock_code, revenue_date, revenue)
-    values (%s, %s, %s)
-        on duplicate key update revenue = values (revenue)
-    """
-    params = (stock_code, revenue_date, revenue)
-    helper.execute_insert_update(sql, params)
-    # if helper.execute_insert_update(sql, params):
-    #    print("Data inserted successfully")
-    helper.close()
+          INSERT INTO revenue (stock_code, revenue_date, revenue)
+          VALUES (%s, %s, %s) ON DUPLICATE KEY
+          UPDATE revenue =
+          VALUES (revenue) \
+          """
+    with DB() as db:
+        db.execute_insert_update(sql, (stock_code, revenue_date, revenue))
 
 
+# === EPS ===
 def get_eps():
-    helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
-    helper.connect()
-    sql = "select * from eps"
-    data = helper.execute_query(sql)
-    helper.close()
-    return data
+    with DB() as db:
+        return db.execute_query("SELECT * FROM eps")
 
 
 def add_eps(stock_code, eps_date, eps):
-    helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
-    helper.connect()
     sql = """
-    insert into eps
-        (stock_code, eps_date, eps)
-    values (%s, %s, %s)
-        on duplicate key update eps = values (eps)
-    """
-    params = (stock_code, eps_date, eps)
-    helper.execute_insert_update(sql, params)
-    # if helper.execute_insert_update(sql, params):
-    #    print("Data inserted successfully")
-    helper.close()
+          INSERT INTO eps (stock_code, eps_date, eps)
+          VALUES (%s, %s, %s) ON DUPLICATE KEY
+          UPDATE eps =
+          VALUES (eps) \
+          """
+    with DB() as db:
+        db.execute_insert_update(sql, (stock_code, eps_date, eps))
+
+
+# === 其他 ===
+def get_last_trade_date(stock_code, year, month):
+    sql = """
+          SELECT MAX(price_date) AS price_date
+          FROM price
+          WHERE stock_code = %s
+              AND YEAR (
+              price_date) = %s
+            AND MONTH (price_date) = %s \
+          """
+    with DB() as db:
+        return db.execute_query(sql, (stock_code, year, month))
