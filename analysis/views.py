@@ -1,32 +1,12 @@
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
-from django.utils.html import format_html
+from django.template.loader import render_to_string
+from django.urls import reverse
 
 from analysis import MySQL
 from analysis.analysis_core import main
-import json
-import django_tables2 as tables
-
-
-class StockTable(tables.Table):
-    stock_id = tables.Column(verbose_name="ID", visible=False)
-    stock_code = tables.Column(verbose_name="股票代號")
-    stock_name = tables.Column(verbose_name="股票名稱")
-    stock_kind = tables.Column(verbose_name="市場別")
-    stock_status = tables.Column(verbose_name="狀態")
-
-    # 導航按鈕
-    action = tables.Column(verbose_name="操作", empty_values=(), orderable=False)
-
-    def render_action(self, record):
-        # record 是該列的 dict
-        url = f"/analysis?stockCode={record['stock_code']}"  # 你可以換成實際 URL
-        return format_html(
-            '<a href="{}" class="btn btn-primary btn-sm">前往</a>', url
-        )
-
-    class Meta:
-        attrs = {"class": "table table-striped table-hover"}
+from analysis.table import StockTable
 
 
 def home(request):
@@ -57,6 +37,47 @@ def stocks(request):
     })
 
 
+def edit_stock(request, stock_id):
+    stock = MySQL.get_stock(stock_id=stock_id, stock_status=None)
+    if not stock:
+        return HttpResponse("Not found", status=404)
+    stock = stock[0]
+
+    fields = request.GET.getlist("fields") or ["stock_name"]
+
+    # 把欄位和值組成 tuple 列表
+    field_values = [(f, stock[f]) for f in fields]
+    # ✅ 傳入 request，才能讓模板裡的 {% csrf_token %} 正常工作
+    html = render_to_string("analysis/edit_stock.html", {
+        "field_values": field_values,
+        "stock_id": stock_id
+    }, request=request)
+    return HttpResponse(html)
+
+
+def update_stock(request, stock_id):
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    # 取得前端送來的欄位與值
+    fields = request.POST.dict()
+    fields.pop("csrfmiddlewaretoken", None)  # 移除 CSRF
+    if not fields:
+        return HttpResponse("No data to update", status=400)
+
+    # 更新資料庫
+    MySQL.update_stock(stock_id, **fields)  # ✅ 注意 **fields
+
+    # 更新後的單筆資料
+    updated_stock = MySQL.get_stock(stock_id=stock_id, stock_status=None)[0]
+
+    # 回傳新的 span，用於 HTMX 替換
+    field = list(fields.keys())[0]  # 假設一次只更新一個欄位
+    url = reverse("edit_stock", args=[stock_id])
+    html = f'<span hx-get="{url}" hx-trigger="click" hx-target="this" hx-swap="outerHTML" style="cursor:pointer;">{updated_stock[field]}</span>'
+    return HttpResponse(html)
+
+
 def stock_detail(request, id):
     # 假資料
     stock = {'id': id, 'name': 'AAPL', 'price': 150}
@@ -67,7 +88,6 @@ def stock_detail(request, id):
 def analysis(request):
     stock_code = request.GET.get('stockCode', '6176')
     analyseDays = request.GET.get('analyseDays', 90)
-    print(analyseDays);
     df = main(stock_code, int(analyseDays))
 
     if df.empty:

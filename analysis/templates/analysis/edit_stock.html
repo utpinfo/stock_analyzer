@@ -1,0 +1,15 @@
+<form hx-post="{% url 'update_stock' stock_id %}" hx-target="this" hx-swap="outerHTML">
+    {% csrf_token %}
+    {% for field, value in field_values %}
+        <div class="mb-2">
+            <input type="text"
+                   name="{{ field }}"
+                   value="{{ value }}"
+                   class="form-control"
+                   hx-trigger="blur"
+                   hx-post="{% url 'update_stock' stock_id %}"
+                   hx-target="this"
+                   hx-swap="outerHTML">
+        </div>
+    {% endfor %}
+</form>

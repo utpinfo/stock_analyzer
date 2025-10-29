@@ -11,25 +11,34 @@ def get_last_trade_date(stock_code, year, month):
     return data
 
 
-def get_stock(stock_status='10', stock_code=None):
+def get_stock(stock_status='10', stock_code=None, stock_id=None):
     helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
     helper.connect()
 
     sql = "SELECT * FROM stock"
     params = []
+    conditions = []
+
+    if stock_id:
+        conditions.append("stock_id = %s")
+        params.append(stock_id)
 
     if stock_code:
-        if isinstance(stock_code, (list, tuple)):  # 多筆代碼
+        if isinstance(stock_code, (list, tuple)):
             placeholders = ', '.join(['%s'] * len(stock_code))
-            sql += f" WHERE stock_code IN ({placeholders})"
+            conditions.append(f"stock_code IN ({placeholders})")
             params.extend(stock_code)
-        else:  # 單筆代碼
-            sql += " WHERE stock_code = %s"
+        else:
+            conditions.append("stock_code = %s")
             params.append(stock_code)
-    elif stock_status:
-        sql += " WHERE stock_status = %s"
+
+    if stock_status:
+        conditions.append("stock_status = %s")
         params.append(stock_status)
 
+    # 如果有任何條件，就加上 WHERE
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
     data = helper.execute_query(sql, tuple(params))
     helper.close()
     return data
@@ -48,6 +57,33 @@ def add_stock(stock_code, stock_name, stock_kind, isin_code):
     helper.execute_insert_update(sql, params)
     helper.close()
 
+def update_stock(stock_id, **kwargs):
+    """
+    更新 stock 表的多個欄位。
+    :param stock_id: 必須提供，指定要更新的股票
+    :param kwargs: 欲更新的欄位，例如 stock_name="新名稱", stock_status="10"
+    """
+    if not stock_id:
+        raise ValueError("stock_id 必須提供")
+
+    allowed_fields = {"stock_name", "stock_code", "stock_kind", "isin_code", "stock_status", "entry_id", "tr_id"}
+    fields_to_update = {k: v for k, v in kwargs.items() if k in allowed_fields}
+
+    if not fields_to_update:
+        raise ValueError("沒有可更新的欄位")
+
+    helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
+    helper.connect()
+
+    # 拼接 SQL
+    set_clause = ", ".join([f"{k} = %s" for k in fields_to_update.keys()])
+    sql = f"UPDATE stock SET {set_clause} WHERE stock_id = %s"
+    params = list(fields_to_update.values()) + [stock_id]
+    success = helper.execute_insert_update(sql, tuple(params))
+    helper.close()
+
+    if not success:
+        raise RuntimeError("更新股票資料失敗")
 
 def get_price(stock_code, limit, sort='asc', b_price_date=None, e_price_date=None):
     helper = MySQLHelper(host='127.0.0.1', user='root', password='', database='stock')
