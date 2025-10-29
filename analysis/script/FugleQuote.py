@@ -1,6 +1,6 @@
 import json
 
-from analysis import FugleUtils
+from analysis.script import FugleUtils
 
 codes = [{"stockNo": "1513", "stockName": "中興電"}, {"stockNo": "6176", "stockName": "瑞儀"},
          {"stockNo": "6285", "stockName": "啟碁"}]

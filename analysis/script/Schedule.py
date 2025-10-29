@@ -2,8 +2,7 @@ from datetime import datetime, timedelta
 
 import yfinance as yf
 
-from analysis import MySQL
-from analysis import YahooStockInfo
+from analysis.script import MySQL, YahooStockInfo
 
 
 # 獲取3年股價/成交量

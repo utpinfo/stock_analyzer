@@ -1,11 +1,11 @@
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-from django.http import HttpResponse, JsonResponse
+from django.core.paginator import Paginator
+from django.http import HttpResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
 from django.urls import reverse
 
-from analysis import MySQL
-from analysis.analysis_core import main
+from analysis.script import MySQL
+from analysis.script.analysis_core import main
 from analysis.table import StockTable
 
 

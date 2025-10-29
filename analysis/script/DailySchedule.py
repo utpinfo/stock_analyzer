@@ -1,8 +1,8 @@
 import threading
 import time
 
-from analysis import MySQL
-from analysis.Schedule import DailySchedule
+from analysis.script import MySQL
+from analysis.script.Schedule import DailySchedule
 
 threads = 300
 

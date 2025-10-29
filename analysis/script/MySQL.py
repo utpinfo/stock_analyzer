@@ -1,4 +1,4 @@
-from analysis.MySQLHelper import MySQLHelper
+from analysis.script.MySQLHelper import MySQLHelper
 
 
 def get_last_trade_date(stock_code, year, month):

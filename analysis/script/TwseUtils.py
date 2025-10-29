@@ -1,10 +1,7 @@
-from io import StringIO
-
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
 
-from analysis import MySQL
+from analysis.script import MySQL
 
 base_url = 'https://isin.twse.com.tw/isin/C_public.jsp'
 # 获取台湾股票列表数据的网址

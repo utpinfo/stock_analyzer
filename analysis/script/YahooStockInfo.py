@@ -3,7 +3,7 @@ import datetime
 import requests
 from bs4 import BeautifulSoup
 
-from analysis import MySQL
+from analysis.script import MySQL
 
 """
 奇摩頁面, 獲取EPS(單位盈餘)
