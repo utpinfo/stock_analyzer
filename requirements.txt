@@ -4,6 +4,7 @@ bs4
 requests
 pandas
 pymysql
+sqlalchemy # 支持 MySQL、SQL Server、Oracle(封裝)
 seaborn
 matplotlib
 pandas_ta

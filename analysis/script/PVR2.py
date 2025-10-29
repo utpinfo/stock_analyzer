@@ -1,4 +1,4 @@
-from utp import MySQL
+
 from datetime import datetime
 import pandas_ta as ta
 import seaborn as sns
@@ -10,7 +10,8 @@ from matplotlib.gridspec import GridSpec
 import humps
 from scipy.optimize import curve_fit
 
-from utp.Schedule import MonthlySchedule, DailySchedule
+from analysis.script import MySQL
+from analysis.script.Schedule import DailySchedule, MonthlySchedule
 
 """
 OBV(On Balance Volume)(能量潮指標)(與價同上則看漲, 與價格同下則看跌, 如果與價背離則反轉)
@@ -920,7 +921,7 @@ def detect_rule3(idx, row, df, rec_days=7, rec_stocks=[], stock_code=None):
 def main():
     for master in codes:
         DailySchedule(stock_kind=master['stockKind'], stock_code=master['stockCode'], isin_code=None) # 更新T,T-1資料
-        details = MySQL.get_price(master['stockCode'], analyse_days, 'asc')
+        details = MySQL.get_price(master['stockCode'], analyse_days, 'desc')
         details = humps.camelize(details)
         if not details:
             continue

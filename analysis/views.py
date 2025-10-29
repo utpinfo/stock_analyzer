@@ -110,3 +110,6 @@ def analysis(request):
         'stockName': stockName,
         'analyseDays': analyseDays,
     })
+
+def opportunity():
+    print(123)

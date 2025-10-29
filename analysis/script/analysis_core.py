@@ -26,7 +26,7 @@ OBV(On Balance Volume)(能量潮指標)(與價同上則看漲, 與價格同下�
 expanding: 行累積合計(階段合計)
 """
 decimal_place = 2
-#analyse_days = 90
+# analyse_days = 90
 stock_code = [6176]
 
 sns.set_theme(style="whitegrid")
@@ -937,12 +937,13 @@ def main(stockCode: str, analyse_days: int = 90):
     codes = humps.camelize(codes)
 
     for master in codes:
-        DailySchedule(stock_kind=master['stockKind'], stock_code=master['stockCode'], isin_code=None) # 更新T,T-1資料
-        details = MySQL.get_price(master['stockCode'], analyse_days, 'asc')
+        DailySchedule(stock_kind=master['stockKind'], stock_code=master['stockCode'], isin_code=None)  # 更新T,T-1資料
+        details = MySQL.get_price(master['stockCode'], analyse_days, 'desc')  # 取資料 (必須倒序取資料)
         if not details:
             continue
         details = humps.camelize(details)
         df = pd.DataFrame(details)
+        df = df.sort_values('priceDate', ascending=True)  # DataFrame (必須正序算均價)
         df['stockName'] = master['stockName']
         df['volume'] = (df['volume'] / 1000).round()
         # ===================== 計算指標 =====================
@@ -989,6 +990,7 @@ def main(stockCode: str, analyse_days: int = 90):
         df['TSI'] = tsi_df.iloc[:, 0]  # 取第一欄
         # 計算均線
         df = calc_ma(df)
+        print(df.to_string())
         # 月報數據
         df = add_revenue(df, master['stockCode'])
         # ===================== 推估走勢 =====================
