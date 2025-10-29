@@ -990,7 +990,6 @@ def main(stockCode: str, analyse_days: int = 90):
         df['TSI'] = tsi_df.iloc[:, 0]  # 取第一欄
         # 計算均線
         df = calc_ma(df)
-        print(df.to_string())
         # 月報數據
         df = add_revenue(df, master['stockCode'])
         # ===================== 推估走勢 =====================
