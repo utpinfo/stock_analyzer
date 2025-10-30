@@ -1,15 +1,36 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+{% load static %}
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
     <div class="container-fluid">
-        <a class="navbar-brand" href="{% url 'home' %}">我的網站</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <!-- Logo / 網站名稱 -->
+        <a class="navbar-brand fw-bold" href="{% url 'home' %}">
+            <i class="bi bi-graph-up me-1"></i> 我的網站
+        </a>
+
+        <!-- 漢堡選單（手機版） -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
+
+        <!-- 導航選單 -->
+        <div class="collapse navbar-collapse" id="navbarContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">首頁</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}"
+                       href="{% url 'home' %}">首頁</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'stocks' %}active{% endif %}"
+                       href="{% url 'stocks' %}">股票清單</a>
                 </li>
             </ul>
+
+            <!-- 搜尋表單 -->
+            <form class="d-flex" method="get" action="{% url 'stocks' %}">
+                <input class="form-control me-2" type="search" placeholder="股票代碼" aria-label="Search" name="stockCode" value="{{ request.GET.stockCode }}">
+                <button class="btn btn-outline-light" type="submit">搜尋</button>
+            </form>
         </div>
     </div>
 </nav>
