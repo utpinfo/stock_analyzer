@@ -1,6 +1,6 @@
 """
 # 前置作業
-1. 安裝 pip install cx_Oracle
+1. 安裝 pip install cx_Oracle (https://www.oracle.com/database/technologies/instant-client/macos-arm64-downloads.html)
 2. 部屬 Oracle Client
 """
 import cx_Oracle
