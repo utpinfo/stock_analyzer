@@ -1,6 +1,9 @@
 {% extends "analysis/base.html" %}
 {% load render_table from django_tables2 %}
 {% load static %}
+{% block extra_head %}
+    <script src="https://unpkg.com/htmx.org@1.9.5/dist/htmx.min.js"></script>
+{% endblock %}
 {% block content %}
     <h1 class="text-center mt-4">股票列表</h1>
     <!-- 表格（含內建分頁）-->
