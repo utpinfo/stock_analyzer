@@ -22,7 +22,7 @@ expanding: 行累積合計(階段合計)
 """
 decimal_place = 2
 analyse_days = 90
-stock_code = [6176]
+stock_code = [1104]
 codes = MySQL.get_stock(stock_status=90, stock_code=stock_code)  # 股票列表
 codes = humps.camelize(codes)
 sns.set_theme(style="whitegrid")
@@ -934,8 +934,8 @@ def main():
         calc_vpmo(df)
         # 計算KDJ
         kd = ta.stoch(high=df['high'], low=df['low'], close=df['close'], k=9, d=3, smooth_k=3)
-        K = kd.iloc[:, 0].round(decimal_place)
-        D = kd.iloc[:, 1].round(decimal_place)
+        K = kd.iloc[:, 0].round(decimal_place) # kd 第 0 欄位四捨五入至指定小數位
+        D = kd.iloc[:, 1].round(decimal_place) # kd 第 1 欄位四捨五入至指定小數位
         J = (3 * K - 2 * D).round(decimal_place)
         df['KDJ'] = list(zip(K, D, J))
         df['J'] = J

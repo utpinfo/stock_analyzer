@@ -72,43 +72,19 @@
 
     const reasons = df.map(r => r.reason || ''); // 空值用空字串
     const revenues = df.map(r => r.revenue || ''); // 空值用空字串
-    const revenueMarks = [];
-    let lastValidRevenueIndex = null;
+    let validRevenue = null;
 
-    // 找前一筆有效 revenue
-    for (let i = 0; i < revenues.length; i++) {
-        const currRevenue = revenues[i];
-        if (!currRevenue || currRevenue <= 0) continue; // 當前無效就跳過
+    const revenueColors = revenues.map(row => {
+        let color = '#87CEFA'; // 預設第一筆藍色
+        if (!row || row <= 0) return color; // 無效灰色
 
-        if (lastValidRevenueIndex !== null) {
-            const prevRevenue = revenues[lastValidRevenueIndex];
-
-            if (currRevenue > prevRevenue) {
-                revenueMarks.push({
-                    xAxis: dates[i],
-                    yAxis: 0,
-                    itemStyle: {color: '#FF0000'}, // 上升紅
-                    symbol: 'triangle',
-                    symbolRotate: 0,
-                    symbolSize: 12,
-                    label: {show: false}
-                });
-            } else if (currRevenue < prevRevenue) {
-                revenueMarks.push({
-                    xAxis: dates[i],
-                    yAxis: 0,
-                    itemStyle: {color: '#00FF00'}, // 下降綠
-                    symbol: 'triangle',
-                    symbolRotate: 180,
-                    symbolSize: 12,
-                    label: {show: false}
-                });
-            }
+        if (validRevenue !== null) {
+            color = row > validRevenue ? '#FF4D4D' : row < validRevenue ? '#00CC66' : color;
         }
 
-        lastValidRevenueIndex = i; // 更新為有效 revenue 的索引
-    }
-    console.log(revenueMarks);
+        validRevenue = row; // 更新前一筆有效值
+        return color;
+    });
 
     function createChart(id, option) {
         const chart = echarts.init(document.getElementById(id));
@@ -137,35 +113,55 @@
             axisPointer: {type: 'cross'},
             formatter: function (params) {
                 const idx = params[0].dataIndex;
-                let tooltipText = '';
-                params.forEach(p => {
-                    tooltipText += `${p.seriesName}: ${p.data}<br>`;
-                });
-                if (reasons[idx].trim() !== '') {
-                    tooltipText += `<strong>Reason: ${reasons[idx]}</strong>`;
-                }
+                const [open, close, low, high] = candleData[idx];
+                let tooltipText = `<strong style="color:blue;">${dates[idx]}</strong><br>`;
+                tooltipText += `<span style="color:red;">收: ${close}</span><br>`;
+                tooltipText += `開: ${open}<br>高: ${high}<br>低: ${low}<br>`;
+                tooltipText += `<span style="color:#FFA500;">5日: ${ma5[idx]}</span><br>`;
+                tooltipText += `<span style="color:#ADD8E6;">10日: ${ma10[idx]}</span><br>`;
+                if (reasons[idx]?.trim()) tooltipText += `<strong>Reason: ${reasons[idx]}</strong>`;
                 return tooltipText;
             },
+            // tooltip居中
             position: function (point, params, dom, rect, size) {
-                // point = [鼠標 x, 鼠標 y]
                 const x = size.viewSize[0] / 2 - size.contentSize[0] / 2; // 水平居中
                 const y = point[1] - size.contentSize[1] - 10; // 鼠標上方
                 return [x, y];
             }
-        }, legend: {data: ['日期', '收盤', '5日均線', '10日均線', 'K線', '🔺', '🔻']},
+        }, legend: {data: ['收盤', '5日均線', '10日均線', 'K線']},
         xAxis: {type: 'category', data: dates, scale: true},
         yAxis: {scale: true, name: '價格'},
         series: [
             {
-                name: '日期',
+                name: '收盤',
                 type: 'line',
-                data: dates, // 空資料
-                lineStyle: {opacity: 0}, // 不顯示線
-                showSymbol: false // 不顯示點
+                data: closeData,
+                symbol: 'none',
+                itemStyle: {color: '#FF0000'},
+                lineStyle: {width: 1}
             },
-            {name: '收盤', type: 'line', data: closeData, symbol: 'none', lineStyle: {width: 1}},
-            {name: '5日均線', type: 'line', data: ma5, symbol: 'none', lineStyle: {width: 1}},
-            {name: '10日均線', type: 'line', data: ma10, symbol: 'none', lineStyle: {width: 1}},
+            {
+                name: '5日均線',
+                type: 'line',
+                data: ma5,
+                symbol: 'none',
+                itemStyle: {color: '#FFA500'},
+                lineStyle: {width: 1}
+            },
+            {
+                name: '10日均線',
+                type: 'line',
+                data: ma10,
+                symbol: 'none',
+                itemStyle: {color: '#ADD8E6'},
+                lineStyle: {width: 1}
+            },
+            {
+                name: 'K線',
+                type: 'candlestick',
+                data: candleData,
+                itemStyle: {color: '#FF0000', color0: '#00da3c', borderColor: '#8A0000', borderColor0: '#008F28'}
+            },
             {
                 name: '🔺',
                 type: 'scatter',
@@ -174,12 +170,6 @@
                 symbolSize: 12,
                 itemStyle: {color: '#FF0000'},
                 z: 10
-            },
-            {
-                name: 'K線',
-                type: 'candlestick',
-                data: candleData,
-                itemStyle: {color: '#ec0000', color0: '#00da3c', borderColor: '#8A0000', borderColor0: '#008F28'}
             },
             {
                 name: '🔺',
@@ -211,9 +201,9 @@
                 z: 10
             }
         ]
-    });
+    })
+    ;
 
-    console.log(df)
     // 成交量
     createChart('volumeChart', {
         title: {text: '成交量'},
@@ -228,14 +218,14 @@
                 itemStyle: {color: '#FFC0CB'}
             },
             {
-                name: '15日均量',
+                name: '15日',
                 type: 'line',
                 data: ma15_volume,  // 對應你的 15_V_MA
                 symbol: 'none',     // 不顯示圓點
                 lineStyle: {color: '#0000FF'} // 線顏色與粗細
             }
         ],
-        legend: {data: ['成交量', '15日均量']}
+        legend: {data: ['成交量', '15日']}
     });
 
     // PVR
@@ -287,27 +277,27 @@
         yAxis: {name: 'KDJ'},
         series: [
             {
-                name: 'K',
+                name: 'K (快線)',
                 type: 'line',
                 data: kdj.map(r => r[0]),
                 symbol: 'none',
-                itemStyle: {color: '#87CEFA'},
+                itemStyle: {color: '#FFA500'},
                 lineStyle: {width: 1}
             },
             {
-                name: 'D',
+                name: 'D (慢線)',
                 type: 'line',
                 data: kdj.map(r => r[1]),
                 symbol: 'none',
-                itemStyle: {color: '#800080'},
+                itemStyle: {color: '#ADD8E6'},
                 lineStyle: {width: 1}
             },
             {
-                name: 'J',
+                name: 'J (偏離值)',
                 type: 'line',
                 data: kdj.map(r => r[2]),
                 symbol: 'none',
-                itemStyle: {color: '#FF0000'},
+                itemStyle: {color: '#800080'},
                 lineStyle: {type: 'dashed', width: 1}
             },
             {
@@ -320,7 +310,7 @@
                 }
             }
         ],
-        legend: {data: ['K', 'D', 'J', 'Cross']}
+        legend: {data: ['K (快線)', 'D (慢線)', 'J (偏離值)']}
     });
 
     createChart('revenueChart', {
@@ -332,11 +322,8 @@
             {
                 type: 'bar',
                 data: revenues,
-                itemStyle: {color: '#87CEFA'},
-                markPoint: {
-                    symbol: 'triangle',
-                    symbolSize: 12,
-                    data: revenueMarks
+                itemStyle: {
+                    color: (params) => revenueColors[params.dataIndex]  // ✅ 根據每筆顏色設定
                 }
             }
         ]

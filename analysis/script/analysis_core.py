@@ -944,8 +944,8 @@ def main(stockCode: str, analyse_days: int = 90):
         if not details:
             continue
         details = humps.camelize(details)
-        df = pd.DataFrame(details)
-        df = df.sort_values('priceDate', ascending=True)  # DataFrame (必須正序算均價)
+        df = pd.DataFrame(details).sort_values('priceDate', ascending=True).reset_index(
+            drop=True)  # DataFrame (必須正序算均價) , 必須reset_index(重置index）
         df['stockName'] = master['stockName']
         df['volume'] = (df['volume'] / 1000).round()
         # ===================== 計算指標 =====================
@@ -954,8 +954,8 @@ def main(stockCode: str, analyse_days: int = 90):
         calc_vpmo(df)
         # 計算KDJ
         kd = ta.stoch(high=df['high'], low=df['low'], close=df['close'], k=9, d=3, smooth_k=3)
-        K = kd.iloc[:, 0].round(decimal_place)
-        D = kd.iloc[:, 1].round(decimal_place)
+        K = kd.iloc[:, 0].round(decimal_place)  # kd 第 0 欄位四捨五入至指定小數位
+        D = kd.iloc[:, 1].round(decimal_place)  # kd 第 1 欄位四捨五入至指定小數位
         J = (3 * K - 2 * D).round(decimal_place)
         df['KDJ'] = list(zip(K, D, J))
         df['J'] = J
