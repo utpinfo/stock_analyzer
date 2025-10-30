@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+
+    <title>{{ stockCode }} - {{ stockName }} 技術分析 (ECharts)</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <style>
+        .chart-container {
+            margin: 10px auto;
+        }
+
+        .chart {
+            width: 100%;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+<h1 class="text-center mt-4">{{ stockCode }} - {{ stockName }} 技術分析</h1>
+
+
+<form id="stockForm" class="row g-2 justify-content-end align-items-center mb-4 me-3">
+    <div class="col-auto">
+        <input type="number" class="form-control" id="analyseDaysInput" placeholder="輸入分析天數"
+               value="{{ analyseDays }}" style="width:80px;">
+    </div>
+    <div class="col-auto">
+        <input type="text" class="form-control" id="stockInput" placeholder="輸入股票代碼" value="{{ stockCode }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">查詢</button>
+    </div>
+</form>
+
+<div class="chart-container">
+    <div id="priceChart" class="chart"></div>
+    <div id="pvrChart" class="chart" style="height:250px"></div>
+    <div id="volumeChart" class="chart" style="height:300px"></div>
+    <div id="rsiChart" class="chart" style="height:250px"></div>
+    <div id="macdChart" class="chart" style="height:250px"></div>
+    <div id="kdjChart" class="chart" style="height:250px"></div>
+    <div id="revenueChart" class="chart" style="height:250px"></div>
+</div>
+
+<script>
+    const df = {{data | safe}};
+
+    const dates = df.map(r => new Date(r.priceDate).toLocaleDateString());
+    const candleData = df.map(r => [r.open, r.close, r.low, r.high]);
+    const closeData = df.map(r => r.close), ma5 = df.map(r => r['5_MA']), ma10 = df.map(r => r['10_MA']);
+    const volume = df.map(r => r.volume), rsi = df.map(r => r.RSI), pvr = df.map(r => r.ampPvr),
+        macd = df.map(r => r.MACD), ma15_volume = df.map(r => r['15_V_MA']);
+    const kdj = df.map(r => r.KDJ || [null, null, null]);
+
+    // 計算金叉死叉位置
+    const crossMarks = [];
+    for (let i = 1; i < kdj.length; i++) {
+        const [prevK, prevD] = kdj[i - 1];
+        const [currK, currD] = kdj[i];
+
+        if (prevK < prevD && currK > currD) { // 金叉
+            crossMarks.push({xAxis: dates[i], yAxis: currK, itemStyle: {color: '#FF0000'}, symbolRotate: 0});
+        }
+        if (prevK > prevD && currK < currD) { // 死叉
+            crossMarks.push({xAxis: dates[i], yAxis: currK, itemStyle: {color: '#00FF00'}, symbolRotate: 180});
+        }
+    }
+
+
+    const reasons = df.map(r => r.reason || ''); // 空值用空字串
+    const revenues = df.map(r => r.revenue || ''); // 空值用空字串
+    let validRevenue = null;
+
+    const revenueColors = revenues.map(row => {
+        let color = '#87CEFA'; // 預設第一筆藍色
+        if (!row || row <= 0) return color; // 無效灰色
+
+        if (validRevenue !== null) {
+            color = row > validRevenue ? '#FF4D4D' : row < validRevenue ? '#00CC66' : color;
+        }
+
+        validRevenue = row; // 更新前一筆有效值
+        return color;
+    });
+
+    function createChart(id, option) {
+        const chart = echarts.init(document.getElementById(id));
+        chart.setOption(option);
+        return chart;
+    }
+
+    // K線 + 均線
+    const minLow = Math.min(...df.map(r => r.low).filter(v => v > 0));
+
+    let upStrong = [], upWeak = [], downWeak = [], downStrong = [];
+
+    df.forEach((r, i) => {
+        const p = [i, minLow];
+        if (r.trand === 1) upStrong.push(p);
+        else if (r.trand === 0.5) upWeak.push(p);
+        else if (r.trand === -0.5) downWeak.push(p);
+        else if (r.trand === -1) downStrong.push(p);
+    });
+
+
+    createChart('priceChart', {
+        title: {text: 'K線圖與均線'},
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {type: 'cross'},
+            formatter: function (params) {
+                const idx = params[0].dataIndex;
+                const [open, close, low, high] = candleData[idx];
+                let tooltipText = `<strong style="color:blue;">${dates[idx]}</strong><br>`;
+                tooltipText += `<span style="color:red;">收: ${close}</span><br>`;
+                tooltipText += `開: ${open}<br>高: ${high}<br>低: ${low}<br>`;
+                tooltipText += `<span style="color:#FFA500;">5日: ${ma5[idx]}</span><br>`;
+                tooltipText += `<span style="color:#ADD8E6;">10日: ${ma10[idx]}</span><br>`;
+                if (reasons[idx]?.trim()) tooltipText += `<strong>Reason: ${reasons[idx]}</strong>`;
+                return tooltipText;
+            },
+            // tooltip居中
+            position: function (point, params, dom, rect, size) {
+                const x = size.viewSize[0] / 2 - size.contentSize[0] / 2; // 水平居中
+                const y = point[1] - size.contentSize[1] - 10; // 鼠標上方
+                return [x, y];
+            }
+        }, legend: {data: ['收盤', '5日均線', '10日均線', 'K線']},
+        xAxis: {type: 'category', data: dates, scale: true},
+        yAxis: {scale: true, name: '價格'},
+        series: [
+            {
+                name: '收盤',
+                type: 'line',
+                data: closeData,
+                symbol: 'none',
+                itemStyle: {color: '#FF0000'},
+                lineStyle: {width: 1}
+            },
+            {
+                name: '5日均線',
+                type: 'line',
+                data: ma5,
+                symbol: 'none',
+                itemStyle: {color: '#FFA500'},
+                lineStyle: {width: 1}
+            },
+            {
+                name: '10日均線',
+                type: 'line',
+                data: ma10,
+                symbol: 'none',
+                itemStyle: {color: '#ADD8E6'},
+                lineStyle: {width: 1}
+            },
+            {
+                name: 'K線',
+                type: 'candlestick',
+                data: candleData,
+                itemStyle: {color: '#FF0000', color0: '#00da3c', borderColor: '#8A0000', borderColor0: '#008F28'}
+            },
+            {
+                name: '🔺',
+                type: 'scatter',
+                data: upStrong,
+                symbol: 'triangle',
+                symbolSize: 12,
+                itemStyle: {color: '#FF0000'},
+                z: 10
+            },
+            {
+                name: '🔺',
+                type: 'scatter',
+                data: upWeak,
+                symbol: 'triangle',
+                symbolSize: 12,
+                itemStyle: {color: '#FFC0CB'},
+                z: 10
+            },
+            {
+                name: '🔻',
+                type: 'scatter',
+                data: downWeak,
+                symbol: 'triangle',
+                symbolSize: 12,
+                symbolRotate: 180,
+                itemStyle: {color: '#90EE90'},
+                z: 10
+            },
+            {
+                name: '🔻',
+                type: 'scatter',
+                data: downStrong,
+                symbol: 'triangle',
+                symbolSize: 12,
+                symbolRotate: 180,
+                itemStyle: {color: '#008000'},
+                z: 10
+            }
+        ]
+    })
+    ;
+
+    // 成交量
+    createChart('volumeChart', {
+        title: {text: '成交量'},
+        tooltip: {trigger: 'axis'},
+        xAxis: {type: 'category', data: dates},
+        yAxis: {type: 'value', name: '成交量'},
+        series: [
+            {
+                name: '成交量',
+                type: 'bar',
+                data: volume,
+                itemStyle: {color: '#FFC0CB'}
+            },
+            {
+                name: '15日',
+                type: 'line',
+                data: ma15_volume,  // 對應你的 15_V_MA
+                symbol: 'none',     // 不顯示圓點
+                lineStyle: {color: '#0000FF'} // 線顏色與粗細
+            }
+        ],
+        legend: {data: ['成交量', '15日']}
+    });
+
+    // PVR
+    createChart('pvrChart', {
+        title: {text: 'PVR (異常波動)'}, tooltip: {trigger: 'axis'},
+        xAxis: {type: 'category', data: dates}, yAxis: {name: 'PVR'},
+        series: [{type: 'line', data: pvr, symbol: 'none'}],
+    });
+
+    // RSI
+    createChart('rsiChart', {
+        title: {text: 'RSI (短中期|相對強弱指標)'},
+        tooltip: {trigger: 'axis'},
+        xAxis: {type: 'category', data: dates},
+        yAxis: {name: 'RSI'},
+        series: [
+            {
+                name: 'RSI',
+                type: 'line',
+                data: rsi,
+                symbol: 'none',
+                markLine: {
+                    silent: true,
+                    data: [
+                        {yAxis: 70, name: '超買線', lineStyle: {color: '#008000', type: 'dashed', width: 1}},
+                        {yAxis: 30, name: '超賣線', lineStyle: {color: '#FF0000', type: 'dashed', width: 1}}
+                    ]
+                }
+            }
+        ],
+        legend: {data: ['RSI']}
+    });
+
+    // MACD
+    createChart('macdChart', {
+        title: {text: 'MACD (中期|趨勢指標)'}, tooltip: {trigger: 'axis'},
+        xAxis: {type: 'category', data: dates}, yAxis: {name: 'MACD'},
+        series: [
+            {type: 'bar', data: macd.map(v => v > 0 ? v : 0), itemStyle: {color: '#FF0000'}},
+            {type: 'bar', data: macd.map(v => v < 0 ? v : 0), itemStyle: {color: '#008000'}}
+        ]
+    });
+
+    // KDJ
+    createChart('kdjChart', {
+        title: {text: 'KDJ (短期|震盪指標|超賣、短線買賣時機)'},
+        tooltip: {trigger: 'axis'},
+        xAxis: {type: 'category', data: dates},
+        yAxis: {name: 'KDJ'},
+        series: [
+            {
+                name: 'K (快線)',
+                type: 'line',
+                data: kdj.map(r => r[0]),
+                symbol: 'none',
+                itemStyle: {color: '#FFA500'},
+                lineStyle: {width: 1}
+            },
+            {
+                name: 'D (慢線)',
+                type: 'line',
+                data: kdj.map(r => r[1]),
+                symbol: 'none',
+                itemStyle: {color: '#ADD8E6'},
+                lineStyle: {width: 1}
+            },
+            {
+                name: 'J (偏離值)',
+                type: 'line',
+                data: kdj.map(r => r[2]),
+                symbol: 'none',
+                itemStyle: {color: '#800080'},
+                lineStyle: {type: 'dashed', width: 1}
+            },
+            {
+                name: 'Cross',
+                type: 'scatter',
+                markPoint: {
+                    data: crossMarks,
+                    symbol: 'triangle',
+                    symbolSize: 12
+                }
+            }
+        ],
+        legend: {data: ['K (快線)', 'D (慢線)', 'J (偏離值)']}
+    });
+
+    createChart('revenueChart', {
+        title: {text: '營收'},
+        tooltip: {trigger: 'axis'},
+        xAxis: {type: 'category', data: dates},
+        yAxis: {type: 'value', name: '營收金額'},
+        series: [
+            {
+                type: 'bar',
+                data: revenues,
+                itemStyle: {
+                    color: (params) => revenueColors[params.dataIndex]  // ✅ 根據每筆顏色設定
+                }
+            }
+        ]
+    });
+
+    const form = document.getElementById('stockForm');
+    form.addEventListener('submit', function (e) {
+        e.preventDefault(); // 防止表單自動提交
+        const code = document.getElementById('stockInput').value.trim();
+        const analyseDays = document.getElementById('analyseDaysInput').value.trim();
+
+        if (code) {
+            let url = `?stockCode=${encodeURIComponent(code)}`;
+            if (analyseDays) {
+                url += `&analyseDays=${encodeURIComponent(analyseDays)}`;
+            }
+            window.location.href = url;
+        }
+    });
+</script>
+
+{% if alert_msg %}
+    <script>
+        alert("{{ alert_msg }}");
+    </script>
+{% endif %}
+</body>
+</html>

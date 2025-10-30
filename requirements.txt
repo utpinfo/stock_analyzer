@@ -12,3 +12,4 @@ tabulate
 pyhumps
 django
 django-tables2
+fugle_marketdata # 富果API
