@@ -77,13 +77,6 @@ def update_stock(request, stock_id):
     html = f'<span hx-get="{url}" hx-trigger="click" hx-target="this" hx-swap="outerHTML" style="cursor:pointer;">{updated_stock[field]}</span>'
     return HttpResponse(html)
 
-
-def stock_detail(request, id):
-    # 假資料
-    stock = {'id': id, 'name': 'AAPL', 'price': 150}
-    return render(request, 'analysis/stock_detail.html', {'stock': stock})
-
-
 # http://127.0.0.1:8000/?stockCode=6176
 def analysis(request):
     stock_code = request.GET.get('stockCode', '6176')

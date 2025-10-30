@@ -31,7 +31,7 @@
             </ul>
 
             <!-- 搜尋表單 -->
-            {% if request.resolver_match.url_name == 'home' %}
+            {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'stocks' %}
                 <!-- 股票清單頁搜尋 -->
                 <form class="d-flex" method="get">
                     <input class="form-control me-2" type="search" placeholder="股票代碼" name="stockCode"
