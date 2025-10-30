@@ -3,24 +3,6 @@
 {% load static %}
 {% block content %}
     <h1 class="text-center mt-4">股票列表</h1>
-    <!-- 篩選表單 -->
-    <form method="get" class="row g-2 justify-content-end align-items-center mb-4 me-3">
-        <div class="col-auto">
-            <input type="text" class="form-control" name="stockCode" placeholder="輸入股票代碼"
-                   value="{{ request.GET.stockCode }}">
-        </div>
-        <div class="col-auto">
-            <input type="text" class="form-control" name="stockName" placeholder="輸入股票名稱"
-                   value="{{ request.GET.stockName }}">
-        </div>
-        <div class="col-auto">
-            <input type="text" class="form-control" name="stockStatus" placeholder="輸入股票狀態"
-                   value="{{ request.GET.stockStatus|default:'90' }}">
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary">查詢</button>
-        </div>
-    </form>
     <!-- 表格（含內建分頁）-->
     {% render_table table %}
 {% endblock %}

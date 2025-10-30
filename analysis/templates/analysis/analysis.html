@@ -7,19 +7,6 @@
 {% block content %}
     <h1 class="text-center mt-4">{{ stockCode }} - {{ stockName }} 技術分析</h1>
 
-    <form id="stockForm" class="row g-2 justify-content-end align-items-center mb-4 me-3">
-        <div class="col-auto">
-            <input type="number" class="form-control" id="analyseDaysInput" placeholder="輸入分析天數"
-                   value="{{ analyseDays }}" style="width:80px;">
-        </div>
-        <div class="col-auto">
-            <input type="text" class="form-control" id="stockInput" placeholder="輸入股票代碼" value="{{ stockCode }}">
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary">查詢</button>
-        </div>
-    </form>
-
     <div class="chart-container">
         <div id="priceChart" class="chart"></div>
         <div id="pvrChart" class="chart" style="height:250px"></div>

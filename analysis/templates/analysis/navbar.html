@@ -4,7 +4,7 @@
     <div class="container-fluid">
         <!-- Logo / 網站名稱 -->
         <a class="navbar-brand fw-bold" href="{% url 'home' %}">
-            <i class="bi bi-graph-up me-1"></i> 我的網站
+            <i class="bi bi-graph-up me-1"></i> Stock Analysis
         </a>
 
         <!-- 漢堡選單（手機版） -->
@@ -22,15 +22,38 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'stocks' %}active{% endif %}"
-                       href="{% url 'stocks' %}">股票清單</a>
+                       href="{% url 'stocks' %}">股票列表</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'analysis' %}active{% endif %}"
+                       href="{% url 'analysis' %}">技術分析</a>
                 </li>
             </ul>
 
             <!-- 搜尋表單 -->
-            <form class="d-flex" method="get" action="{% url 'stocks' %}">
-                <input class="form-control me-2" type="search" placeholder="股票代碼" aria-label="Search" name="stockCode" value="{{ request.GET.stockCode }}">
-                <button class="btn btn-outline-light" type="submit">搜尋</button>
-            </form>
+            {% if request.resolver_match.url_name == 'home' %}
+                <!-- 股票清單頁搜尋 -->
+                <form class="d-flex" method="get">
+                    <input class="form-control me-2" type="search" placeholder="股票代碼" name="stockCode"
+                           value="{{ request.GET.stockCode }}">
+                    <input class="form-control me-2" type="search" placeholder="股票名稱" name="stockName"
+                           value="{{ request.GET.stockName }}">
+                    <input type="number" class="form-control me-2" type="search" placeholder="股票狀態"
+                           name="stockStatus"
+                           value="{{ request.GET.stockStatus |default:'90' }}">
+                    <button class="btn btn-outline-light" type="submit">搜尋</button>
+                </form>
+            {% elif request.resolver_match.url_name == 'analysis' %}
+                <!-- 首頁搜尋（簡單版） -->
+                <form class="d-flex" method="get">
+                    <input class="form-control me-2" type="search" placeholder="股票代碼" name="stockCode"
+                           value="{{ request.GET.stockCode }}">
+                    <input type="number" class="form-control me-2" type="search" placeholder="股票狀態"
+                           name="stockStatus"
+                           value="{{ request.GET.stockStatus }}">
+                    <button class="btn btn-outline-light" type="submit">搜尋</button>
+                </form>
+            {% endif %}
         </div>
     </div>
 </nav>
