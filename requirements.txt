@@ -3,7 +3,8 @@ lxml
 bs4
 requests
 pandas
-pymysql
+pymysql # mysql驅動
+cx_Oracle # oracle驅動
 sqlalchemy # 支持 MySQL、SQL Server、Oracle(封裝)
 seaborn
 matplotlib
