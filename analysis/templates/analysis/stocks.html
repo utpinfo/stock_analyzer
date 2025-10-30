@@ -1,10 +1,15 @@
 {% extends "analysis/base.html" %}
 {% load render_table from django_tables2 %}
 {% load static %}
-{% block extra_head %}
-    <script src="https://unpkg.com/htmx.org@1.9.5/dist/htmx.min.js"></script>
-{% endblock %}
 {% block content %}
+    {% block extra_head %}
+        <script src="https://unpkg.com/htmx.org@1.9.5/dist/htmx.min.js"></script>
+        <script>
+            document.body.addEventListener('htmx:configRequest', event => {
+                event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+            });
+        </script>
+    {% endblock %}
     <h1 class="text-center mt-4">股票列表</h1>
     <!-- 表格（含內建分頁）-->
     {% render_table table %}

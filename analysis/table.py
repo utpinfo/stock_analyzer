@@ -29,20 +29,34 @@ class StockTable(tables.Table):
             record["stock_name"]
         )
 
-    def render_stock_kind(self, record):
-        url = reverse("edit_stock", args=[record["stock_id"]])
-        return format_html(
-            '<span hx-get="{}?fields=stock_kind" hx-trigger="click" hx-target="this" hx-swap="outerHTML" style="cursor:pointer;">{}</span>',
-            url,
-            record["stock_kind"]
-        )
-
     def render_stock_status(self, record):
-        url = reverse("edit_stock", args=[record["stock_id"]])
+        stock_id = record["stock_id"]
+        value = record["stock_status"]  # 假設原始值是 '90' 或 '00'
+        url = reverse("update_stock", args=[stock_id])
+
         return format_html(
-            '<span hx-get="{}?fields=stock_status" hx-trigger="click" hx-target="this" hx-swap="outerHTML" style="cursor:pointer;">{}</span>',
-            url,
-            record["stock_status"]
+            '''
+            <form hx-post="{url}" hx-target="this" hx-swap="outerHTML">
+                <div class="form-check form-switch mb-2">
+                    <!-- hidden input 確保取消勾選也能送出 -->
+                    <input type="hidden" name="stock_status" value="00">
+                    
+                    <input class="form-check-input"
+                           type="checkbox"
+                           name="stock_status"
+                           value="90"
+                           id="statusSwitch{stock_id}"
+                           {checked}
+                           hx-trigger="change"
+                           hx-post="{url}"
+                           hx-target="this"
+                           hx-swap="outerHTML">
+                </div>
+            </form>
+            ''',
+            stock_id=stock_id,
+            url=url,
+            checked='checked' if value == '90' else ''
         )
 
     class Meta:

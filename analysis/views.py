@@ -75,7 +75,9 @@ def update_stock(request, stock_id):
     field = list(fields.keys())[0]  # 假設一次只更新一個欄位
     url = reverse("edit_stock", args=[stock_id])
     html = f'<span hx-get="{url}" hx-trigger="click" hx-target="this" hx-swap="outerHTML" style="cursor:pointer;">{updated_stock[field]}</span>'
-    return HttpResponse(html)
+    # return HttpResponse(html)
+    return HttpResponse(status=204)
+
 
 # http://127.0.0.1:8000/?stockCode=6176
 def analysis(request):
@@ -103,6 +105,7 @@ def analysis(request):
         'stockName': stockName,
         'analyseDays': analyseDays,
     })
+
 
 def opportunity():
     print(123)
