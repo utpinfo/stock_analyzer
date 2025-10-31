@@ -377,16 +377,20 @@ def win_rate_68(df):
 
     # MACD 條件
     df['MACD_hist'] = df['DIF'] - df['DEA']
-    #df['macd_condition'] = (df['DIF'].shift(1) < df['DEA'].shift(1)) & (df['DIF'] > df['DEA']) & \
+    # df['macd_condition'] = (df['DIF'].shift(1) < df['DEA'].shift(1)) & (df['DIF'] > df['DEA']) & \
     #                       (df['MACD_hist'].shift(1) < 0) & (df['MACD_hist'] > 0)
-
+    # --- J 線警戒(力道出盡-反轉) ---
+    df['J_high'] = df['J'] > 80  # 超買警戒
+    df['J_turn_down'] = df['J'] < df['J'].shift(1)  # 反轉下彎
+    df['J_alert'] = df['J_high'] | df['J_turn_down']  # 警戒條件合併
     # 綜合條件
     df['winRate68'] = df['golden_cross_valid'] & df['MA5_stable'] & df['volume_condition']
-
+    df['loseRate68'] = df['golden_cross_valid'] & df['MA5_stable'] & df['volume_condition'] & df['J_alert']
     # 清理暫存欄位
     df.drop(columns=['golden_cross', 'golden_cross_valid', 'MA5_stable', 'volume_condition', 'MACD_hist'], inplace=True)
 
     return df
+
 
 def lose_rate_76(df):
     """
@@ -406,12 +410,14 @@ def lose_rate_76(df):
     df['macd_condition'] = (df['MACD_hist'] < 0) & (df['MACD_hist'] < df['MACD_hist'].shift(1))
 
     # 綜合出逃訊號
-    df['loseRate76'] = df['dead_cross'] & df['volume_condition'] #& df['macd_condition']
+    df['loseRate76'] = df['dead_cross'] & df['volume_condition']  # & df['macd_condition']
 
     # 清理中間欄位（保留訊號）
-    #df.drop(columns=['dead_cross', 'volume_condition', 'MACD_hist', 'macd_condition'], inplace=True)
+    df.drop(columns=['dead_cross', 'volume_condition', 'MACD_hist', 'macd_condition'], inplace=True)
 
     return df
+
+
 # ==================== 預估函式區 ====================
 def exp_func(x, a, b):
     """指數函數 y = a * b^x"""
@@ -950,12 +956,15 @@ def detect_rule3(idx, row, df, rec_days=7, rec_stocks=[], stock_code=None):
             reasons.append("RSI 背離 → 底部反轉")
 
     # === 完全自定義覆蓋 ===
-    if row['winRate68']:
-        score = 100
-        reasons.append("最強多頭組合（勝率68%）")
-    elif row['loseRate76']:
+    if row['loseRate76']:
         score = -100
         reasons.append("最強空頭組合 (割肉急逃)")
+    elif row['loseRate68']:
+        score = -100
+        reasons.append("最強多頭結束 (見頂)")
+    elif row['winRate68']:
+        score = 100
+        reasons.append("最強多頭組合（勝率68%）")
 
     # === 分數標準化 ===
     max_possible = sum(base_weights.values())
@@ -977,7 +986,8 @@ def detect_rule3(idx, row, df, rec_days=7, rec_stocks=[], stock_code=None):
     reason = f"★ {label} ({final_score:+.1f}%) | " + ", ".join(reasons)
 
     # 更新 DataFrame
-    if (abs(row['diffPvr']) > abs(row['avgPvr'] * 2)) or (row['winRate68'] or (row['loseRate76'])):
+    if (abs(row['diffPvr']) > abs(row['avgPvr'] * 2)) or (
+            row['winRate68'] or (row['loseRate68']) or (row['loseRate76'])):
         df.at[idx, 'trand'] = trand
         df.at[idx, 'score'] = round(final_score, 2)
         df.at[idx, 'reason'] = reason
