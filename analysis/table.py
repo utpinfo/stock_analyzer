@@ -22,7 +22,7 @@ class StockTable(tables.Table):
 
     # ✅ 新增：HTMX 行內編輯的股票名稱欄位
     def render_stock_name(self, record):
-        url = reverse("edit_stock", args=[record["stock_id"]])
+        url = reverse("update_stock", args=[record["stock_id"]])
         return format_html(
             '<span hx-get="{}?fields=stock_name" hx-trigger="click" hx-target="this" hx-swap="outerHTML" style="cursor:pointer;">{}</span>',
             url,

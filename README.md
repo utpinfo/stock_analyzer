@@ -1,4 +1,4 @@
-# 首次運行
+# 首次運行 (Django)
 
 1. 安裝依賴
    pip install -r requirements.txt
