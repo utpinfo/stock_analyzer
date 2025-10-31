@@ -215,9 +215,9 @@ def calc_macd(prices):
 
 # ===================== 計算各種均線 =====================
 def calc_ma(df):
-    for p in [5, 10, 15]:
-        df[f'{p}_MA'] = df['close'].rolling(p).mean()
-        df[f'{p}_V_MA'] = df['volume'].rolling(p).mean()
+    for p in [5, 10, 20, 60]:
+        df[f'{p}_MA'] = ta.sma(df['close'], length=p)  # 簡單均線
+        df[f'{p}_V_MA'] = ta.sma(df['volume'], length=p)  # 成交量均線
     return df
 
 
@@ -353,6 +353,73 @@ def detect_trade_signals(df, pct_thresh_up=2.2, pct_thresh_acc=2.0, vol_window=5
 
     return df
 
+
+def win_rate_68(df):
+    """
+    條件：
+    1. 黃金交叉日 T：5MA突破20MA
+    2. 避免假突破：T 日及前2日收盤價都站上20MA
+    3. 成交量條件：Volume[T] >= 1.3 * 20_V_MA
+    4. * MACD 金叉且柱狀圖由負轉正 (保留規則, 以增加命中率)
+    """
+
+    # 金叉浮現 (當日 5MA > 20MA 且前一日 5MA < 20MA)
+    df['golden_cross'] = (df['5_MA'] > df['20_MA']) & (df['5_MA'].shift(1) < df['20_MA'].shift(1))
+
+    # 有效金叉 (前3日是否存在金叉)
+    df['golden_cross_valid'] = df['golden_cross'].rolling(3).max().fillna(0).astype(bool)
+
+    # 穩定突破 (前2日5MA是否都高於20MA（穩定突破))
+    df['MA5_stable'] = (df['5_MA'].shift(1) > df['20_MA'].shift(1)) & (df['5_MA'].shift(2) > df['20_MA'].shift(2))
+
+    # 成交量條件
+    df['volume_condition'] = df['volume'] >= 1.3 * df['20_V_MA']
+
+    # MACD 條件
+    df['MACD_hist'] = df['DIF'] - df['DEA']
+    #df['macd_condition'] = (df['DIF'].shift(1) < df['DEA'].shift(1)) & (df['DIF'] > df['DEA']) & \
+    #                       (df['MACD_hist'].shift(1) < 0) & (df['MACD_hist'] > 0)
+
+    # 綜合條件
+    df['winRate68'] = df['golden_cross_valid'] & df['MA5_stable'] & df['volume_condition']
+
+    # 清理暫存欄位
+    df.drop(columns=['golden_cross', 'golden_cross_valid', 'MA5_stable', 'volume_condition', 'MACD_hist'], inplace=True)
+
+    return df
+
+def lose_rate_68(df):
+    """
+    逆向策略（空方信號）：
+    1. 死亡交叉日 T：5MA 跌破 20MA
+    2. 確認跌破有效：T 日及前2日 5MA 都低於 20MA
+    3. 成交量條件：Volume[T] <= 0.8 * 20_V_MA （量縮）
+    4. * MACD 死叉且柱狀圖由正轉負 (保留規則, 可選)
+    """
+
+    # 死亡交叉出現 (當日 5MA < 20MA 且前一日 5MA > 20MA)
+    df['dead_cross'] = (df['5_MA'] < df['20_MA']) & (df['5_MA'].shift(1) > df['20_MA'].shift(1))
+
+    # 有效死叉 (前3日內是否存在死叉)
+    df['dead_cross_valid'] = df['dead_cross'].rolling(3).max().fillna(0).astype(bool)
+
+    # 穩定跌破 (前2日5MA都低於20MA)
+    df['MA5_stable_down'] = (df['5_MA'].shift(1) < df['20_MA'].shift(1)) & (df['5_MA'].shift(2) < df['20_MA'].shift(2))
+
+    # 成交量條件 (放量下跌)
+    df['volume_condition'] = df['volume'] <= 0.8 * df['20_V_MA']
+
+    # MACD 死叉且柱狀圖由正轉負
+    df['MACD_hist'] = df['DIF'] - df['DEA']
+    #df['macd_condition'] = (df['DIF'].shift(1) > df['DEA'].shift(1)) & (df['DIF'] < df['DEA']) & \
+    #                       (df['MACD_hist'].shift(1) > 0) & (df['MACD_hist'] < 0)
+
+    # 綜合條件（空方 signal）
+    df['loseRate68'] = df['dead_cross_valid'] & df['MA5_stable_down'] & df['volume_condition']
+
+    # 清理暫存欄位
+    df.drop(columns=['MACD_hist'], inplace=True)
+    return df
 
 # ==================== 預估函式區 ====================
 def exp_func(x, a, b):
@@ -891,6 +958,14 @@ def detect_rule3(idx, row, df, rec_days=7, rec_stocks=[], stock_code=None):
             score += bottom_boost * 0.7
             reasons.append("RSI 背離 → 底部反轉")
 
+    # === 完全自定義覆蓋 ===
+    if row['winRate68']:
+        score = 100
+        reasons.append("最強多頭組合（勝率68%）")
+    elif row['loseRate68']:
+        score = -100
+        reasons.append("最強空頭組合 (割肉急逃)")
+
     # === 分數標準化 ===
     max_possible = sum(base_weights.values())
     final_score = np.clip(score / max_possible, -1, 1) * 100
@@ -911,7 +986,7 @@ def detect_rule3(idx, row, df, rec_days=7, rec_stocks=[], stock_code=None):
     reason = f"★ {label} ({final_score:+.1f}%) | " + ", ".join(reasons)
 
     # 更新 DataFrame
-    if abs(row['diffPvr']) > abs(row['avgPvr'] * 2):
+    if (abs(row['diffPvr']) > abs(row['avgPvr'] * 2)) or (row['winRate68'] or (row['loseRate68'])):
         df.at[idx, 'trand'] = trand
         df.at[idx, 'score'] = round(final_score, 2)
         df.at[idx, 'reason'] = reason
@@ -965,7 +1040,7 @@ def main(stockCode: str, analyse_days: int = 90):
         if len(df['close']) < 30:  # MACD慢線需要至少26個數值
             print(f"股票:{stock_code} 價格資料太少，無法計算 MACD")
             continue
-        macd = ta.macd(df['close'])
+        macd = ta.macd(df['close'], fast=12, slow=26, signal=9, append=True)
         df['DIF'] = macd['MACD_12_26_9'].fillna(0)
         df['DEA'] = macd['MACDs_12_26_9'].fillna(0)
         df['MACD'] = macd['MACDh_12_26_9'].fillna(0)
@@ -1000,6 +1075,9 @@ def main(stockCode: str, analyse_days: int = 90):
         # 2. 檢測(出貨/承接)
         df = detect_trade_signals(df, pct_thresh_up=2, pct_thresh_acc=2, vol_window=5, rsi='RSI',
                                   macd='MACD')  # 2. detect_trade_signals
+        win_rate_68(df)
+        lose_rate_68(df)
+        print(df.to_string())
         # 3. 檢測買賣時機
         for idx, row in df.iterrows():
             detect_rule3(idx, row, df)

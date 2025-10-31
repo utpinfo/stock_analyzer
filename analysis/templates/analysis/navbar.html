@@ -28,6 +28,21 @@
                     <a class="nav-link {% if request.resolver_match.url_name == 'analysis' %}active{% endif %}"
                        href="{% url 'analysis' %}">技術分析</a>
                 </li>
+
+                <!-- ✅ 新增：產業資料來源 (含子選單) -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="industryDataDropdown" role="button"
+                       data-bs-toggle="dropdown" aria-expanded="false" title="外部產業資料來源">
+                        產業資料來源
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="industryDataDropdown">
+                        <li><a class="dropdown-item" href="https://ieknet.iek.org.tw/" target="_blank" title="台灣主要電子產業供應鏈報告">IEK (工研院產科國際所)</a></li>
+                        <li><a class="dropdown-item" href="https://omdia.tech.informa.com/" target="_blank" title="國際市場需求預測（面板、伺服器、AI晶片、手機等）">Omdia</a></li>
+                        <li><a class="dropdown-item" href="https://www.idc.com/" target="_blank" title="國際市場需求預測（面板、伺服器、AI晶片、手機等）">IDC</a></li>
+                        <li><a class="dropdown-item" href="https://www.gartner.com/en" target="_blank" title="國際市場需求預測（面板、伺服器、AI晶片、手機等）">Gartner</a></li>
+                    </ul>
+                </li>
+
             </ul>
 
             <!-- 搜尋表單 -->

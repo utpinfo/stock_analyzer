@@ -36,7 +36,7 @@
             console.log(df);
             const dates = df.map(r => new Date(r.priceDate).toLocaleDateString());
             const candleData = df.map(r => [r.open, r.close, r.low, r.high]);
-            const closeData = df.map(r => r.close), ma5 = df.map(r => r['5_MA']), ma10 = df.map(r => r['10_MA']);
+            const closeData = df.map(r => r.close), ma5 = df.map(r => r['5_MA']), ma10 = df.map(r => r['10_MA']), ma20 = df.map(r => r['20_MA']);
             const volume = df.map(r => r.volume), rsi = df.map(r => r.RSI), pvr = df.map(r => r.ampPvr),
                 macd = df.map(r => r.MACD), ma15_volume = df.map(r => r['15_V_MA']);
             const kdj = df.map(r => r.KDJ || [null, null, null]);
@@ -105,6 +105,7 @@
                         tooltipText += `開: ${open}<br>高: ${high}<br>低: ${low}<br>`;
                         tooltipText += `<span style="color:#FFA500;">5日: ${ma5[idx]}</span><br>`;
                         tooltipText += `<span style="color:#ADD8E6;">10日: ${ma10[idx]}</span><br>`;
+                        tooltipText += `<span style="color:#008afd;">20日: ${ma10[idx]}</span><br>`;
                         if (reasons[idx]?.trim()) tooltipText += `<strong>Reason: ${reasons[idx]}</strong>`;
                         return tooltipText;
                     },
@@ -114,7 +115,7 @@
                         const y = point[1] - size.contentSize[1] - 10; // 鼠標上方
                         return [x, y];
                     }
-                }, legend: {data: ['收盤', '5日均線', '10日均線', 'K線']},
+                }, legend: {data: ['收盤', '5日均線', '10日均線', '20日均線', 'K線']},
                 xAxis: {type: 'category', data: dates, scale: true},
                 yAxis: {scale: true, name: '價格'},
                 series: [
@@ -140,6 +141,14 @@
                         data: ma10,
                         symbol: 'none',
                         itemStyle: {color: '#ADD8E6'},
+                        lineStyle: {width: 1}
+                    },
+                    {
+                        name: '20日均線',
+                        type: 'line',
+                        data: ma20,
+                        symbol: 'none',
+                        itemStyle: {color: '#008afd'},
                         lineStyle: {width: 1}
                     },
                     {
