@@ -61,6 +61,8 @@
             {% elif request.resolver_match.url_name == 'analysis' %}
                 <!-- 首頁搜尋（簡單版） -->
                 <form class="d-flex" method="get">
+                    <input class="form-control me-2" type="search" placeholder="數據量" name="analyseDays"
+                           value="{{ request.GET.analyseDays |default:'90' }}">
                     <input class="form-control me-2" type="search" placeholder="股票代碼" name="stockCode"
                            value="{{ request.GET.stockCode }}">
                     <input type="number" class="form-control me-2" type="search" placeholder="股票狀態"

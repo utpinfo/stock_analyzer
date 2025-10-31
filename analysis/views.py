@@ -10,6 +10,7 @@ from analysis.table import StockTable
 def home(request):
     return stocks(request)
 
+
 # 查詢股票列表
 def stocks(request):
     stock_code = request.GET.get('stockCode')
@@ -20,7 +21,7 @@ def stocks(request):
     data = MySQL.get_stock(stock_status=stock_status, stock_code=stock_code, stock_name=stock_name)
     # data = data[:3000]  # 限制最大筆數
     page_size = 30
-    table = StockTable(data) # 重新格式化數據 (包含二次喧擾)
+    table = StockTable(data)  # 重新格式化數據 (包含二次喧擾)
     paginator = Paginator(data, page_size)
 
     page_number = request.GET.get("page", "1")

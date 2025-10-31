@@ -388,39 +388,30 @@ def win_rate_68(df):
 
     return df
 
-def lose_rate_68(df):
+def lose_rate_76(df):
     """
-    逆向策略（空方信號）：
-    1. 死亡交叉日 T：5MA 跌破 20MA
-    2. 確認跌破有效：T 日及前2日 5MA 都低於 20MA
-    3. 成交量條件：Volume[T] <= 0.8 * 20_V_MA （量縮）
-    4. * MACD 死叉且柱狀圖由正轉負 (保留規則, 可選)
+    出逃策略（勝率 76%）：
+        1. 5日均線死叉 20日均線
+        2. 成交量 < 20日均量 0.7倍（量縮）
+        3. MACD 柱狀圖負值擴大（hist < hist[1] < 0）
     """
+    # 1. 死叉：當日 5MA < 20MA 且前一日 5MA >= 20MA
+    df['dead_cross'] = (df['5_MA'] < df['20_MA']) & (df['5_MA'].shift(1) >= df['20_MA'].shift(1))
 
-    # 死亡交叉出現 (當日 5MA < 20MA 且前一日 5MA > 20MA)
-    df['dead_cross'] = (df['5_MA'] < df['20_MA']) & (df['5_MA'].shift(1) > df['20_MA'].shift(1))
+    # 2. 量縮：當日量 <= 0.7 * 20日均量
+    df['volume_condition'] = df['volume'] <= 0.7 * df['20_V_MA']
 
-    # 有效死叉 (前3日內是否存在死叉)
-    df['dead_cross_valid'] = df['dead_cross'].rolling(3).max().fillna(0).astype(bool)
-
-    # 穩定跌破 (前2日5MA都低於20MA)
-    df['MA5_stable_down'] = (df['5_MA'].shift(1) < df['20_MA'].shift(1)) & (df['5_MA'].shift(2) < df['20_MA'].shift(2))
-
-    # 成交量條件 (放量下跌)
-    df['volume_condition'] = df['volume'] <= 0.8 * df['20_V_MA']
-
-    # MACD 死叉且柱狀圖由正轉負
+    # 3. MACD 柱狀圖負值擴大
     df['MACD_hist'] = df['DIF'] - df['DEA']
-    #df['macd_condition'] = (df['DIF'].shift(1) > df['DEA'].shift(1)) & (df['DIF'] < df['DEA']) & \
-    #                       (df['MACD_hist'].shift(1) > 0) & (df['MACD_hist'] < 0)
+    df['macd_condition'] = (df['MACD_hist'] < 0) & (df['MACD_hist'] < df['MACD_hist'].shift(1))
 
-    # 綜合條件（空方 signal）
-    df['loseRate68'] = df['dead_cross_valid'] & df['MA5_stable_down'] & df['volume_condition']
+    # 綜合出逃訊號
+    df['loseRate76'] = df['dead_cross'] & df['volume_condition'] #& df['macd_condition']
 
-    # 清理暫存欄位
-    df.drop(columns=['MACD_hist'], inplace=True)
+    # 清理中間欄位（保留訊號）
+    #df.drop(columns=['dead_cross', 'volume_condition', 'MACD_hist', 'macd_condition'], inplace=True)
+
     return df
-
 # ==================== 預估函式區 ====================
 def exp_func(x, a, b):
     """指數函數 y = a * b^x"""
@@ -962,7 +953,7 @@ def detect_rule3(idx, row, df, rec_days=7, rec_stocks=[], stock_code=None):
     if row['winRate68']:
         score = 100
         reasons.append("最強多頭組合（勝率68%）")
-    elif row['loseRate68']:
+    elif row['loseRate76']:
         score = -100
         reasons.append("最強空頭組合 (割肉急逃)")
 
@@ -986,7 +977,7 @@ def detect_rule3(idx, row, df, rec_days=7, rec_stocks=[], stock_code=None):
     reason = f"★ {label} ({final_score:+.1f}%) | " + ", ".join(reasons)
 
     # 更新 DataFrame
-    if (abs(row['diffPvr']) > abs(row['avgPvr'] * 2)) or (row['winRate68'] or (row['loseRate68'])):
+    if (abs(row['diffPvr']) > abs(row['avgPvr'] * 2)) or (row['winRate68'] or (row['loseRate76'])):
         df.at[idx, 'trand'] = trand
         df.at[idx, 'score'] = round(final_score, 2)
         df.at[idx, 'reason'] = reason
@@ -1076,7 +1067,7 @@ def main(stockCode: str, analyse_days: int = 90):
         df = detect_trade_signals(df, pct_thresh_up=2, pct_thresh_acc=2, vol_window=5, rsi='RSI',
                                   macd='MACD')  # 2. detect_trade_signals
         win_rate_68(df)
-        lose_rate_68(df)
+        lose_rate_76(df)
         print(df.to_string())
         # 3. 檢測買賣時機
         for idx, row in df.iterrows():

@@ -36,9 +36,11 @@
             console.log(df);
             const dates = df.map(r => new Date(r.priceDate).toLocaleDateString());
             const candleData = df.map(r => [r.open, r.close, r.low, r.high]);
-            const closeData = df.map(r => r.close), ma5 = df.map(r => r['5_MA']), ma10 = df.map(r => r['10_MA']), ma20 = df.map(r => r['20_MA']);
+            const closeData = df.map(r => r.close), ma5 = df.map(r => r['5_MA']), ma10 = df.map(r => r['10_MA']),
+                ma20 = df.map(r => r['20_MA']);
             const volume = df.map(r => r.volume), rsi = df.map(r => r.RSI), pvr = df.map(r => r.ampPvr),
-                macd = df.map(r => r.MACD), ma15_volume = df.map(r => r['15_V_MA']);
+                macd = df.map(r => r.MACD), ma10_volume = df.map(r => r['10_V_MA']),
+                ma20_volume = df.map(r => r['20_V_MA']);
             const kdj = df.map(r => r.KDJ || [null, null, null]);
 
             // 計算金叉死叉位置
@@ -218,14 +220,21 @@
                         itemStyle: {color: '#FFC0CB'}
                     },
                     {
-                        name: '15日',
+                        name: '10日',
                         type: 'line',
-                        data: ma15_volume,  // 對應你的 15_V_MA
+                        data: ma10_volume,  // 對應你的 15_V_MA
                         symbol: 'none',     // 不顯示圓點
-                        lineStyle: {color: '#0000FF'} // 線顏色與粗細
+                        lineStyle: {color: '#ADD8E6'} // 線顏色與粗細
+                    },
+                    {
+                        name: '20日',
+                        type: 'line',
+                        data: ma20_volume,  // 對應你的 15_V_MA
+                        symbol: 'none',     // 不顯示圓點
+                        lineStyle: {color: '#008afd'} // 線顏色與粗細
                     }
                 ],
-                legend: {data: ['成交量', '15日']}
+                legend: {data: ['成交量', '20日', '10日']}
             });
 
             // PVR
